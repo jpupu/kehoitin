@@ -1,0 +1,81 @@
+[
+	{"name":"Compile plain text",
+		"source":["text hello"],
+		"compiled":"hello"
+	},
+	{"name":"Compile multiple text spans",
+		"source":["text hello", "text world"],
+		"compiled":"helloworld"
+	},
+	{"name":"Compile quoted text",
+		"source":["text \" hello world \""],
+		"compiled":" hello world "
+	},
+	{"name":"Compile color - simple",
+		"source":["color white blue"],
+		"compiled":"%F{white}%K{blue}"
+	},
+	{"name":"Compile color - deduplication",
+		"source":["color white blue", "color green blue", "color green white"],
+		"compiled":"%F{white}%K{blue}%F{green}%K{white}"
+	},
+	{"name":"Compile color - angle separator",
+		"source":["color black green", "color white blue angle"],
+		"compiled":"%F{black}%K{green}%F{green}%K{blue}\ue0b0%F{white}"
+	},
+	{"name":"Compile color - reverse angle separator",
+		"source":["color black green", "color white blue rev-angle"],
+		"compiled":"%F{black}%K{green}%F{blue}\ue0b2%F{white}%K{blue}"
+	},
+	{"name":"Compile color - round separator",
+		"source":["color black green", "color white blue round"],
+		"compiled":"%F{black}%K{green}%F{green}%K{blue}\ue0b4%F{white}"
+	},
+	{"name":"Compile color - reverse round separator",
+		"source":["color black green", "color white blue rev-round"],
+		"compiled":"%F{black}%K{green}%F{blue}\ue0b6%F{white}%K{blue}"
+	},
+	{"name":"Compile color - slope separator",
+		"source":["color black green", "color white blue slope"],
+		"compiled":"%F{black}%K{green}%F{green}%K{blue}\ue0bc%F{white}"
+	},
+	{"name":"Compile color - reverse slope separator",
+		"source":["color black green", "color white blue rev-slope"],
+		"compiled":"%F{black}%K{green}%F{blue}\ue0be%F{white}%K{blue}"
+	},
+	{"name":"Compile color - downslope separator",
+		"source":["color black green", "color white blue downslope"],
+		"compiled":"%F{black}%K{green}%F{green}%K{blue}\ue0b8%F{white}"
+	},
+	{"name":"Compile color - reverse downslope separator",
+		"source":["color black green", "color white blue rev-downslope"],
+		"compiled":"%F{black}%K{green}%F{blue}\ue0ba%F{white}%K{blue}"
+	},
+	{"name":"Compile function - cwd",
+		"source":["func cwd"],
+		"compiled":"%`(cwd)"
+	},
+	{"name":"Execute plain",
+		"compiled":"hello",
+		"executed":"hello"
+	},
+	{"name":"Execute function - unknown",
+		"compiled":"%`(foobarbaz)",
+		"executed":"(invalid function foobarbaz)"
+	},
+	{"name":"Execute function - cwd",
+		"working_directory":"/tmp/kehoitin-test/foo",
+		"compiled":"%`(cwd)",
+		"executed":"/tmp/kehoitin-test/foo"
+	},
+	{"name":"Execute function - git-branch - under git",
+		"working_directory":"/tmp/kehoitin-test/gitty/sub",
+		"compiled":"%`(git-branch)",
+		"executed":"main"
+	},
+	{"name":"Execute function - git-branch - not under git",
+		"working_directory":"/tmp/kehoitin-test/foo",
+		"compiled":"%`(git-branch)",
+		"executed":""
+	}
+]

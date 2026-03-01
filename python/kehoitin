@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+from pathlib import Path
+import shlex
+import socket
+import sys
+from types import SimpleNamespace as Ns
+
+funcs = {"host": "%m", "pwd": "%~"}
+
+host_abbr = {"localhost-live": "⌂"}
+
+sepmap = {
+    "angle": ("\ue0b0", True),
+    "rev-angle": ("\ue0b2", False),
+    "round": ("\ue0b4", True),
+    "rev-round": ("\ue0b6", False),
+    "downslope": ("\ue0b8", True),
+    "rev-downslope": ("\ue0ba", False),
+    "slope": ("\ue0bc", True),
+    "rev-slope": ("\ue0be", False),
+}
+
+
+def func_host():
+    hostname = socket.gethostname()
+    return host_abbr.get(hostname, hostname)
+
+
+def func_git_branch():
+    root = Path.cwd()
+    gitdir = None
+    for d in [root] + list(root.parents):
+        if (d / ".git").exists():
+            gitdir = d / ".git"
+            break
+    if not gitdir:
+        return ""
+
+    x = None
+    if (gitdir / "rebase-merge").exists():
+        x = "REBASE"
+    elif (gitdir / "rebase-apply").exists():
+        x = "REBASE"
+    elif (gitdir / "MERGE_HEAD").exists():
+        x = "MERGING"
+    elif (gitdir / "BISECT_LOG").exists():
+        x = "BISECTING"
+
+    head = (gitdir / "HEAD").read_text().strip()
+    if head.startswith("ref:"):
+        if head.startswith("ref: refs/heads/"):
+            head = head[16:]
+    else:
+        head = head[:7]
+
+    if x:
+        head = f"{head}:{x}"
+
+    return head
+
+
+def func_default():
+    return "--"
+
+
+def separator(ch):
+    return sepmap[ch]
+
+
+class PromptBuilder:
+    def __init__(self):
+        self.fg = None
+        self.bg = None
+        self.spans = []
+
+    def set_color(self, fg, bg):
+        if fg is not None and fg != self.fg:
+            self.fg = fg
+            if fg == "clear":
+                self.spans.append("%f")
+            else:
+                self.spans += ["%F{", fg, "}"]
+        if bg is not None and bg != self.bg:
+            self.bg = bg
+            if bg == "clear":
+                self.spans.append("%k")
+            else:
+                self.spans += ["%K{", bg, "}"]
+
+    def add(self, *args):
+        self.spans += args
+
+    def get(self):
+        return "".join(self.spans)
+
+
+def compile(input_lines):
+    blocks = []
+    for line in input_lines:
+        tokens = shlex.split(line)
+        if not tokens:
+            continue
+        elif tokens[0] == "color":
+            if len(tokens) == 3:
+                blocks.append(
+                    Ns(type="color", fg=tokens[1], bg=tokens[2], separator=None)
+                )
+            else:
+                blocks.append(
+                    Ns(
+                        type="color",
+                        fg=tokens[1],
+                        bg=tokens[2],
+                        separator=separator(tokens[3]),
+                    )
+                )
+        elif tokens[0] == "text":
+            blocks.append(Ns(type="text", text=tokens[1]))
+        elif tokens[0] == "func":
+            blocks.append(Ns(type="text", text=f"%`({tokens[1]})"))
+
+    # for bl in blocks:
+    #     print(bl, file=sys.stderr)
+
+    prompt = PromptBuilder()
+    for bl in blocks:
+        if bl.type == "color":
+            if bl.separator:
+                symbol, forward = bl.separator
+                if forward:
+                    prompt.set_color(prompt.bg, bl.bg)
+                else:
+                    prompt.set_color(bl.bg, prompt.bg)
+                prompt.add(symbol)
+            prompt.set_color(bl.fg, bl.bg)
+        elif bl.type == "text":
+            prompt.add(bl.text)
+
+    return prompt.get()
+
+
+def execute(prompt):
+    out = []
+    i = 0
+    while True:
+        start = prompt.find("%`(", i)
+        if start == -1:
+            break
+        out.append(prompt[i:start])
+        end = prompt.find(")", start + 3)
+        if end == -1:
+            raise RuntimeError("Function without end: " + prompt[start:])
+        name = prompt[start + 3 : end]
+
+        if name == "cwd":
+            out.append(str(Path.cwd()))
+        elif name == "host":
+            out.append(func_host())
+        elif name == "git-branch":
+            out.append(func_git_branch())
+        else:
+            out.append(f"(invalid function {name})")
+
+        i = end + 1
+
+    out.append(prompt[i:])
+    return "".join(out)
+
+
+def show_usage():
+    print("usage: kehoitin compile|execute")
+
+
+def main():
+    if len(sys.argv) != 2:
+        show_usage()
+    if sys.argv[1] == "compile":
+        print(compile(sys.stdin), end="")
+    elif sys.argv[1] == "execute":
+        print(execute(sys.stdin.read()), end="")
+    else:
+        show_usage()
+
+
+if __name__ == "__main__":
+    main()
