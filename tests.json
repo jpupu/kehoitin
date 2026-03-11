@@ -68,6 +68,10 @@
 		"compiled":":kcmd:(cwd)",
 		"executed":"/tmp/kehoitin-test/foo"
 	},
+	{"name":"Execute function - host",
+		"compiled":":kcmd:(host)",
+		"executed":"testhost"
+	},
 	{"name":"Execute function - git-branch - under git",
 		"working_directory":"/tmp/kehoitin-test/gitty/sub",
 		"compiled":":kcmd:(git-branch)",

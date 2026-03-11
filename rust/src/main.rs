@@ -1,5 +1,20 @@
-use gethostname::gethostname;
 use std::io::{self, Read};
+
+unsafe extern "C" {
+    pub fn gethostname(name: *mut libc::c_char, size: libc::size_t) -> libc::c_int;
+}
+
+fn safe_gethostname() -> String {
+    let mut buf: [libc::c_char; 100] = [0; 100];
+    let success = unsafe { gethostname(&mut buf[0], 99) };
+    if success != 0 {
+        String::from("error")
+    } else {
+        unsafe { std::ffi::CStr::from_ptr(&buf[0]) }
+            .to_string_lossy()
+            .to_string()
+    }
+}
 
 trait QuoteSplitter {
     fn split_quoted(&self) -> Vec<&str>;
@@ -184,7 +199,7 @@ fn execute(buf: &str) {
                     .unwrap_or_default()
                     .to_string_lossy()
                     .into(),
-                "host" => gethostname().into_string().unwrap_or_default(),
+                "host" => safe_gethostname(),
                 "git-branch" => git_branch().unwrap_or_default(),
                 _ => format!("(invalid function {})", func),
             };

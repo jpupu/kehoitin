@@ -34,6 +34,10 @@ class Tester:
             cwd=self.cwd,
             capture_output=True,
             text=True,
+            env={
+                "LD_PRELOAD": Path("fakehostname/fakehostname.so").absolute(),
+                "FAKEHOSTNAME": "testhost",
+            },
         )
         if p.returncode != 0 or p.stderr:
             print("\x1b[31m \x1b[0m", end="\n")
@@ -77,6 +81,10 @@ class Tester:
 
     def run_tests(self) -> None:
         tests = json.load(open("tests.json"))
+
+        if not Path("fakehostname/fakehostname.so").exists():
+            print("error: fakehostname/fakehostname.so not found!", file=sys.stderr)
+            sys.exit(1)
 
         root = Path("/tmp/kehoitin-test")
         (root / "foo").mkdir(parents=True, exist_ok=True)
