@@ -53,29 +53,29 @@
 	},
 	{"name":"Compile function - cwd",
 		"source":["func cwd"],
-		"compiled":"%`(cwd)"
+		"compiled":":kcmd:(cwd)"
 	},
 	{"name":"Execute plain",
 		"compiled":"hello",
 		"executed":"hello"
 	},
 	{"name":"Execute function - unknown",
-		"compiled":"%`(foobarbaz)",
+		"compiled":":kcmd:(foobarbaz)",
 		"executed":"(invalid function foobarbaz)"
 	},
 	{"name":"Execute function - cwd",
 		"working_directory":"/tmp/kehoitin-test/foo",
-		"compiled":"%`(cwd)",
+		"compiled":":kcmd:(cwd)",
 		"executed":"/tmp/kehoitin-test/foo"
 	},
 	{"name":"Execute function - git-branch - under git",
 		"working_directory":"/tmp/kehoitin-test/gitty/sub",
-		"compiled":"%`(git-branch)",
+		"compiled":":kcmd:(git-branch)",
 		"executed":"main"
 	},
 	{"name":"Execute function - git-branch - not under git",
 		"working_directory":"/tmp/kehoitin-test/foo",
-		"compiled":"%`(git-branch)",
+		"compiled":":kcmd:(git-branch)",
 		"executed":""
 	}
 ]

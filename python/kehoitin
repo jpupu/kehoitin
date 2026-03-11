@@ -117,7 +117,7 @@ def compile(input_lines):
         elif tokens[0] == "text":
             blocks.append(Ns(type="text", text=tokens[1]))
         elif tokens[0] == "func":
-            blocks.append(Ns(type="text", text=f"%`({tokens[1]})"))
+            blocks.append(Ns(type="text", text=f":kcmd:({tokens[1]})"))
 
     # for bl in blocks:
     #     print(bl, file=sys.stderr)
@@ -143,14 +143,14 @@ def execute(prompt):
     out = []
     i = 0
     while True:
-        start = prompt.find("%`(", i)
+        start = prompt.find(":kcmd:(", i)
         if start == -1:
             break
         out.append(prompt[i:start])
-        end = prompt.find(")", start + 3)
+        end = prompt.find(")", start + 7)
         if end == -1:
             raise RuntimeError("Function without end: " + prompt[start:])
-        name = prompt[start + 3 : end]
+        name = prompt[start + 7 : end]
 
         if name == "cwd":
             out.append(str(Path.cwd()))

@@ -162,7 +162,7 @@ fn compile() {
                 result.color(fg, bg);
             }
             "func" => {
-                result.push(&format!("%`({})", words[1]));
+                result.push(&format!(":kcmd:({})", words[1]));
             }
             _ => result.push(&format!("[BAD COMMAND {}]", command)),
         }
@@ -175,9 +175,9 @@ fn execute(buf: &str) {
     let mut out = String::new();
 
     let mut prev = 0;
-    for (i, _) in buf.match_indices("%`(") {
-        if let Some(k) = buf[(i + 3)..].find(')') {
-            let func = &buf[(i + 3)..(i + 3 + k)];
+    for (i, _) in buf.match_indices(":kcmd:(") {
+        if let Some(k) = buf[(i + 7)..].find(')') {
+            let func = &buf[(i + 7)..(i + 7 + k)];
 
             let funcout = match func {
                 "cwd" => std::env::current_dir()
@@ -189,7 +189,7 @@ fn execute(buf: &str) {
                 _ => format!("(invalid function {})", func),
             };
             out.push_str(&funcout);
-            prev += 4 + k;
+            prev += 8 + k;
         } else {
             out.push_str("(UNENDING_FUNCTION)");
         }
