@@ -191,6 +191,8 @@ fn execute(buf: &str) {
 
     let mut prev = 0;
     for (i, _) in buf.match_indices(":kcmd:(") {
+        out.push_str(&buf[prev..i]);
+
         if let Some(k) = buf[(i + 7)..].find(')') {
             let func = &buf[(i + 7)..(i + 7 + k)];
 
@@ -204,7 +206,7 @@ fn execute(buf: &str) {
                 _ => format!("(invalid function {})", func),
             };
             out.push_str(&funcout);
-            prev += 8 + k;
+            prev = i + 8 + k;
         } else {
             out.push_str("(UNENDING_FUNCTION)");
         }

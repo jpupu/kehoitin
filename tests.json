@@ -81,5 +81,13 @@
 		"working_directory":"/tmp/kehoitin-test/foo",
 		"compiled":":kcmd:(git-branch)",
 		"executed":""
+	},
+	{"name":"Execute function within text",
+		"compiled":"foo-:kcmd:(host)-bar",
+		"executed":"foo-testhost-bar"
+	},
+	{"name":"Execute multiple functions",
+		"compiled":":kcmd:(host) and :kcmd:(host)",
+		"executed":"testhost and testhost"
 	}
 ]
