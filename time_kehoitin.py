@@ -3,27 +3,40 @@
 import timeit
 import subprocess
 import sys
+from pathlib import Path
+import socket
 
-COMPILE_INPUT = b"""
-color white blue
-text "@"
-func host
-color yellow black slope
-func cwd
-color white black angle
-text " "
-color clear clear
-"""
-
-EXECUTE_INPUT = b"%`(host)::%`(cwd)>> "
+SOURCE = Path("example.prompt").read_bytes()
+COMPILED = Path("example.compiled").read_bytes()
+EXECUTED = (
+    Path("example.executed")
+    .read_bytes()
+    .replace(b"/home/arto/src/kehoitin", bytes(Path.cwd()))
+    .replace(b"localhost-live", socket.gethostname().encode())
+)
 
 
-def run_compile():
-    subprocess.run([executable, "compile"], input=COMPILE_INPUT, capture_output=True)
+def run(command: str, input: bytes, output: bytes) -> None:
+    p = subprocess.run([executable, command], input=input, capture_output=True)
+    if p.stdout != output:
+        raise RuntimeError(
+            f"running [{command}] failed:\n"
+            f"OUT  {p.stdout!r}\n"
+            f"GOAL {output!r}\n"
+            f"STATUS {p.returncode}\n"
+        )
 
 
-def run_execute():
-    subprocess.run([executable, "execute"], input=EXECUTE_INPUT, capture_output=True)
+def timed_run(command: str, input: bytes, output: bytes) -> None:
+    t = timeit.Timer(
+        "run(command, input, output)",
+        setup="from __main__ import run",
+        globals=dict(command=command, input=input, output=output),
+    )
+    count, time = t.autorange()
+    print(
+        f"{command}: {count} calls in {time * 1000:.0f} ms, {time / count * 1e6:.0f} μs/call"
+    )
 
 
 if len(sys.argv) != 2:
@@ -31,14 +44,5 @@ if len(sys.argv) != 2:
     sys.exit(1)
 executable = sys.argv[1]
 
-t = timeit.Timer("run_compile()", setup="from __main__ import run_compile")
-count, time = t.autorange()
-print(
-    f"compile: {count} calls in {time * 1000:.0f} ms, {time / count * 1e6:.0f} μs/call"
-)
-
-t = timeit.Timer("run_execute()", setup="from __main__ import run_execute")
-count, time = t.autorange()
-print(
-    f"execute: {count} calls in {time * 1000:.0f} ms, {time / count * 1e6:.0f} μs/call"
-)
+timed_run("compile", SOURCE, COMPILED)
+timed_run("execute", COMPILED, EXECUTED)

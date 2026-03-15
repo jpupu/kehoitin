@@ -23,7 +23,8 @@ sepmap = {
 
 def func_host():
     hostname = socket.gethostname()
-    return host_abbr.get(hostname, hostname)
+    return hostname
+    # return host_abbr.get(hostname, hostname)
 
 
 def func_git_branch():
