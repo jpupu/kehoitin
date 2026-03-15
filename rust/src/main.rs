@@ -147,7 +147,7 @@ const SEPMAP: [(&str, &str, bool); 8] = [
     ("rev-slope", "\u{e0be}", true),
 ];
 
-fn compile() {
+fn compile() -> String {
     let mut result = PromptBuilder::new();
 
     for line in io::stdin().lines() {
@@ -183,10 +183,10 @@ fn compile() {
         }
     }
 
-    print!("{}", result.result);
+    result.result
 }
 
-fn execute(buf: &str) {
+fn execute(buf: &str) -> String {
     let mut out = String::new();
 
     let mut prev = 0;
@@ -213,17 +213,18 @@ fn execute(buf: &str) {
     }
     out.push_str(&buf[prev..]);
 
-    print!("{}", out);
+    out
 }
 
 fn main() {
     match std::env::args().nth(1).as_deref() {
-        Some("compile") => compile(),
+        Some("compile") => print!("{}", compile()),
         Some("execute") => {
             let mut buf = String::new();
             _ = io::stdin().read_to_string(&mut buf).unwrap();
-            execute(&buf)
+            print!("{}", execute(&buf));
         }
+        Some("interpret") => print!("{}", execute(&compile())),
         x => {
             eprintln!("usage: kehoitin compile|execute");
             eprintln!("got [{:?}]", x);

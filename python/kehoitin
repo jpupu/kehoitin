@@ -179,8 +179,11 @@ def main():
         print(compile(sys.stdin), end="")
     elif sys.argv[1] == "execute":
         print(execute(sys.stdin.read()), end="")
+    elif sys.argv[1] == "interpret":
+        print(execute(compile(sys.stdin)), end="")
     else:
         show_usage()
+        sys.exit(2)
 
 
 if __name__ == "__main__":

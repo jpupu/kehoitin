@@ -24,6 +24,7 @@ def run(command: str, input: bytes, output: bytes) -> None:
             f"OUT  {p.stdout!r}\n"
             f"GOAL {output!r}\n"
             f"STATUS {p.returncode}\n"
+            f"STDERR {p.stderr.decode()}\n"
         )
 
 
@@ -46,3 +47,4 @@ executable = sys.argv[1]
 
 timed_run("compile", SOURCE, COMPILED)
 timed_run("execute", COMPILED, EXECUTED)
+timed_run("interpret", SOURCE, EXECUTED)
