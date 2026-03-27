@@ -1,0 +1,77 @@
+[
+	{"name":"Plain text",
+		"source":["text hello"],
+		"output":"hello"
+	},
+	{"name":"Multiple text spans",
+		"source":["text hello", "text world"],
+		"output":"helloworld"
+	},
+	{"name":"Quoted text",
+		"source":["text \" hello world \""],
+		"output":" hello world "
+	},
+  {"name":"Color - simple",
+		"source":["color white blue"],
+		"output":"%F{white}%K{blue}"
+	},
+	{"name":"Color - deduplication",
+		"source":["color white blue", "color green blue", "color green white"],
+		"output":"%F{white}%K{blue}%F{green}%K{white}"
+	},
+	{"name":"Color - angle separator",
+		"source":["color black green", "color white blue angle"],
+		"output":"%F{black}%K{green}%F{green}%K{blue}\ue0b0%F{white}"
+	},
+	{"name":"Color - reverse angle separator",
+		"source":["color black green", "color white blue rev-angle"],
+		"output":"%F{black}%K{green}%F{blue}\ue0b2%F{white}%K{blue}"
+	},
+	{"name":"Color - round separator",
+		"source":["color black green", "color white blue round"],
+		"output":"%F{black}%K{green}%F{green}%K{blue}\ue0b4%F{white}"
+	},
+	{"name":"Color - reverse round separator",
+		"source":["color black green", "color white blue rev-round"],
+		"output":"%F{black}%K{green}%F{blue}\ue0b6%F{white}%K{blue}"
+	},
+	{"name":"Color - slope separator",
+		"source":["color black green", "color white blue slope"],
+		"output":"%F{black}%K{green}%F{green}%K{blue}\ue0bc%F{white}"
+	},
+	{"name":"Color - reverse slope separator",
+		"source":["color black green", "color white blue rev-slope"],
+		"output":"%F{black}%K{green}%F{blue}\ue0be%F{white}%K{blue}"
+	},
+	{"name":"Color - downslope separator",
+		"source":["color black green", "color white blue downslope"],
+		"output":"%F{black}%K{green}%F{green}%K{blue}\ue0b8%F{white}"
+	},
+	{"name":"Color - reverse downslope separator",
+		"source":["color black green", "color white blue rev-downslope"],
+		"output":"%F{black}%K{green}%F{blue}\ue0ba%F{white}%K{blue}"
+	},
+	{"name":"Function - unknown",
+		"source":["func foobarbaz"],
+		"output":"(invalid function foobarbaz)"
+	},
+	{"name":"Function - cwd",
+		"working_directory":"/tmp/kehoitin-test/foo",
+		"source":["func cwd"],
+		"output":"/tmp/kehoitin-test/foo"
+	},
+	{"name":"Function - host",
+		"source":["func host"],
+		"output":"testhost"
+	},
+	{"name":"Function - git-branch - under git",
+		"working_directory":"/tmp/kehoitin-test/gitty/sub",
+		"source":["func git-branch"],
+		"output":"main"
+	},
+	{"name":"Function - git-branch - not under git",
+		"working_directory":"/tmp/kehoitin-test/foo",
+		"source":["func git-branch"],
+		"output":""
+	}
+]

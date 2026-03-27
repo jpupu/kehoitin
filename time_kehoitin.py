@@ -7,7 +7,6 @@ from pathlib import Path
 import socket
 
 SOURCE = Path("example.prompt").read_bytes()
-COMPILED = Path("example.compiled").read_bytes()
 EXECUTED = (
     Path("example.executed")
     .read_bytes()
@@ -45,6 +44,4 @@ if len(sys.argv) != 2:
     sys.exit(1)
 executable = sys.argv[1]
 
-timed_run("compile", SOURCE, COMPILED)
-timed_run("execute", COMPILED, EXECUTED)
 timed_run("interpret", SOURCE, EXECUTED)

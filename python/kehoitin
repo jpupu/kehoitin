@@ -3,7 +3,6 @@ from pathlib import Path
 import shlex
 import socket
 import sys
-from types import SimpleNamespace as Ns
 
 funcs = {"host": "%m", "pwd": "%~"}
 
@@ -95,92 +94,49 @@ class PromptBuilder:
         return "".join(self.spans)
 
 
-def compile(input_lines):
-    blocks = []
+def interpret(input_lines):
+    out = PromptBuilder()
+
     for line in input_lines:
         tokens = shlex.split(line)
         if not tokens:
             continue
-        elif tokens[0] == "color":
-            if len(tokens) == 3:
-                blocks.append(
-                    Ns(type="color", fg=tokens[1], bg=tokens[2], separator=None)
-                )
-            else:
-                blocks.append(
-                    Ns(
-                        type="color",
-                        fg=tokens[1],
-                        bg=tokens[2],
-                        separator=separator(tokens[3]),
-                    )
-                )
         elif tokens[0] == "text":
-            blocks.append(Ns(type="text", text=tokens[1]))
-        elif tokens[0] == "func":
-            blocks.append(Ns(type="text", text=f":kcmd:({tokens[1]})"))
-
-    # for bl in blocks:
-    #     print(bl, file=sys.stderr)
-
-    prompt = PromptBuilder()
-    for bl in blocks:
-        if bl.type == "color":
-            if bl.separator:
-                symbol, forward = bl.separator
+            out.add(tokens[1])
+        elif tokens[0] == "color":
+            fg = tokens[1]
+            bg = tokens[2]
+            if len(tokens) > 3:
+                symbol, forward = separator(tokens[3])
                 if forward:
-                    prompt.set_color(prompt.bg, bl.bg)
+                    out.set_color(out.bg, bg)
                 else:
-                    prompt.set_color(bl.bg, prompt.bg)
-                prompt.add(symbol)
-            prompt.set_color(bl.fg, bl.bg)
-        elif bl.type == "text":
-            prompt.add(bl.text)
+                    out.set_color(bg, out.bg)
+                out.add(symbol)
+            out.set_color(fg, bg)
+        elif tokens[0] == "func":
+            name = tokens[1]
+            if name == "cwd":
+                out.add(str(Path.cwd()))
+            elif name == "host":
+                out.add(func_host())
+            elif name == "git-branch":
+                out.add(func_git_branch())
+            else:
+                out.add(f"(invalid function {name})")
 
-    return prompt.get()
-
-
-def execute(prompt):
-    out = []
-    i = 0
-    while True:
-        start = prompt.find(":kcmd:(", i)
-        if start == -1:
-            break
-        out.append(prompt[i:start])
-        end = prompt.find(")", start + 7)
-        if end == -1:
-            raise RuntimeError("Function without end: " + prompt[start:])
-        name = prompt[start + 7 : end]
-
-        if name == "cwd":
-            out.append(str(Path.cwd()))
-        elif name == "host":
-            out.append(func_host())
-        elif name == "git-branch":
-            out.append(func_git_branch())
-        else:
-            out.append(f"(invalid function {name})")
-
-        i = end + 1
-
-    out.append(prompt[i:])
-    return "".join(out)
+    return out.get()
 
 
 def show_usage():
-    print("usage: kehoitin compile|execute")
+    print("usage: kehoitin interpret")
 
 
 def main():
     if len(sys.argv) != 2:
         show_usage()
-    if sys.argv[1] == "compile":
-        print(compile(sys.stdin), end="")
-    elif sys.argv[1] == "execute":
-        print(execute(sys.stdin.read()), end="")
     elif sys.argv[1] == "interpret":
-        print(execute(compile(sys.stdin)), end="")
+        print(interpret(sys.stdin), end="")
     else:
         show_usage()
         sys.exit(2)

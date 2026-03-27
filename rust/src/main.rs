@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::io;
 
 unsafe extern "C" {
     pub fn gethostname(name: *mut libc::c_char, size: libc::size_t) -> libc::c_int;
@@ -147,16 +147,15 @@ const SEPMAP: [(&str, &str, bool); 8] = [
     ("rev-slope", "\u{e0be}", true),
 ];
 
-fn compile() -> String {
-    let mut result = PromptBuilder::new();
-
+fn interpret() -> String {
+    let mut out = PromptBuilder::new();
     for line in io::stdin().lines() {
         let linebuf = line.unwrap();
         let words = linebuf.split_quoted();
         let command = words[0];
 
         match command {
-            "text" => result.push(words[1]),
+            "text" => out.push(words[1]),
             "color" => {
                 let fg = words[1];
                 let bg = words[2];
@@ -165,68 +164,42 @@ fn compile() -> String {
                     for (key, text, reverse) in &SEPMAP {
                         if sep == key {
                             if *reverse {
-                                result.color(bg, &result.bg.clone());
+                                out.color(bg, &out.bg.clone());
                             } else {
-                                result.color(&result.bg.clone(), bg);
+                                out.color(&out.bg.clone(), bg);
                             }
-                            result.push(text);
+                            out.push(text);
                             break;
                         }
                     }
                 }
-                result.color(fg, bg);
+                out.color(fg, bg);
             }
             "func" => {
-                result.push(&format!(":kcmd:({})", words[1]));
+                let func = words[1];
+                let funcout = match func {
+                    "cwd" => std::env::current_dir()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into(),
+                    "host" => safe_gethostname(),
+                    "git-branch" => git_branch().unwrap_or_default(),
+                    _ => format!("(invalid function {})", func),
+                };
+                out.push(&funcout);
             }
-            _ => result.push(&format!("[BAD COMMAND {}]", command)),
+            _ => out.push("(bad command)"),
         }
     }
 
-    result.result
-}
-
-fn execute(buf: &str) -> String {
-    let mut out = String::new();
-
-    let mut prev = 0;
-    for (i, _) in buf.match_indices(":kcmd:(") {
-        out.push_str(&buf[prev..i]);
-
-        if let Some(k) = buf[(i + 7)..].find(')') {
-            let func = &buf[(i + 7)..(i + 7 + k)];
-
-            let funcout = match func {
-                "cwd" => std::env::current_dir()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .into(),
-                "host" => safe_gethostname(),
-                "git-branch" => git_branch().unwrap_or_default(),
-                _ => format!("(invalid function {})", func),
-            };
-            out.push_str(&funcout);
-            prev = i + 8 + k;
-        } else {
-            out.push_str("(UNENDING_FUNCTION)");
-        }
-    }
-    out.push_str(&buf[prev..]);
-
-    out
+    out.result
 }
 
 fn main() {
     match std::env::args().nth(1).as_deref() {
-        Some("compile") => print!("{}", compile()),
-        Some("execute") => {
-            let mut buf = String::new();
-            _ = io::stdin().read_to_string(&mut buf).unwrap();
-            print!("{}", execute(&buf));
-        }
-        Some("interpret") => print!("{}", execute(&compile())),
+        Some("interpret") => print!("{}", interpret()),
         x => {
-            eprintln!("usage: kehoitin compile|execute");
+            eprintln!("usage: kehoitin interpret");
             eprintln!("got [{:?}]", x);
             std::process::exit(1);
         }

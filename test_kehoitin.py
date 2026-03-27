@@ -61,26 +61,21 @@ class Tester:
 
     def run_testcase(self, t: dict) -> None:
         source = t.get("source")
-        compiled = t.get("compiled")
-        executed = t.get("executed")
+        output = t.get("output")
         if isinstance(source, list):
             source = "\n".join(source)
-        if isinstance(compiled, list):
-            compiled = "\n".join(compiled)
-        if isinstance(executed, list):
-            executed = "\n".join(executed)
+        if isinstance(output, list):
+            output = "\n".join(output)
 
         print("test:", t["name"], end="  ")
 
         self.cwd = t.get("working_directory") or Path.cwd()
 
-        compiled = self.check("compile", source, compiled)
-        if executed is not None:
-            self.check("execute", compiled, executed)
+        self.check("interpret", source, output)
         print("")
 
     def run_tests(self) -> None:
-        tests = json.load(open("tests.json"))
+        tests = json.load(open("testcases.json"))
 
         if not Path("fakehostname/fakehostname.so").exists():
             print("error: fakehostname/fakehostname.so not found!", file=sys.stderr)
