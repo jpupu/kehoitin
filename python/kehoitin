@@ -3,6 +3,7 @@ from pathlib import Path
 import shlex
 import socket
 import sys
+from collections.abc import Iterable
 
 funcs = {"host": "%m", "pwd": "%~"}
 
@@ -20,13 +21,13 @@ sepmap = {
 }
 
 
-def func_host():
+def func_host() -> str:
     hostname = socket.gethostname()
     return hostname
     # return host_abbr.get(hostname, hostname)
 
 
-def func_git_branch():
+def func_git_branch() -> str:
     root = Path.cwd()
     gitdir = None
     for d in [root] + list(root.parents):
@@ -59,21 +60,21 @@ def func_git_branch():
     return head
 
 
-def func_default():
+def func_default() -> str:
     return "--"
 
 
-def separator(ch):
+def separator(ch: str) -> tuple[str, bool]:
     return sepmap[ch]
 
 
 class PromptBuilder:
-    def __init__(self):
-        self.fg = None
-        self.bg = None
-        self.spans = []
+    def __init__(self) -> None:
+        self.fg: str | None = None
+        self.bg: str | None = None
+        self.spans: list[str] = []
 
-    def set_color(self, fg, bg):
+    def set_color(self, fg: str | None, bg: str | None) -> None:
         if fg is not None and fg != self.fg:
             self.fg = fg
             if fg == "clear":
@@ -87,14 +88,14 @@ class PromptBuilder:
             else:
                 self.spans += ["%K{", bg, "}"]
 
-    def add(self, *args):
+    def add(self, *args) -> None:
         self.spans += args
 
-    def get(self):
+    def get(self) -> str:
         return "".join(self.spans)
 
 
-def interpret(input_lines):
+def interpret(input_lines: Iterable[str]) -> str:
     out = PromptBuilder()
 
     for line in input_lines:
@@ -128,11 +129,11 @@ def interpret(input_lines):
     return out.get()
 
 
-def show_usage():
+def show_usage() -> None:
     print("usage: kehoitin interpret")
 
 
-def main():
+def main() -> None:
     if len(sys.argv) != 2:
         show_usage()
     elif sys.argv[1] == "interpret":
