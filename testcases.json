@@ -73,5 +73,56 @@
 		"working_directory":"/tmp/kehoitin-test/foo",
 		"source":["func git-branch"],
 		"output":""
+	},
+	{"name":"If block - unknown condition",
+	  "source":["text before-","if xxx","  text hello","  text world","end","text -after"],
+	  "output":"before-(invalid condition xxx)-after"
+	},
+	{"name":"If block - true",
+	  "source":["text before-","if true","  text hello","  text world","end","text -after"],
+	  "output":"before-helloworld-after"
+	},
+	{"name":"If block - false",
+	  "source":["text before-","if false","  text hello","  text world","end","text -after"],
+	  "output":"before--after"
+	},
+	{"name":"If block - nested",
+	  "source":["if true",
+	  						"text before-",
+	  						"if true",
+	  							"text inside-",
+	  						"end",
+	  						"if false",
+	  							"text INSIDE-",
+	  						"end",
+	  						"text after",
+	  					"end"],
+	  "output":"before-inside-after"
+	},
+	{"name":"If block - negation",
+	  "source":[
+	  	"if !true","text not-true","end",
+	  	"if !false","text not-false","end"],
+	  "output":"not-false"
+	},
+	{"name":"Condition - git - true",
+		"working_directory":"/tmp/kehoitin-test/gitty/sub",
+		"source":["if git","text yes","end"],
+		"output":"yes"
+	},
+	{"name":"Condition - git - false",
+		"working_directory":"/tmp/kehoitin-test/foo",
+		"source":["if git","text yes","end"],
+		"output":""
+	},
+	{"name":"Condition - success - true",
+		"status":0,
+		"source":["if success","text yes","end"],
+		"output":"yes"
+	},
+	{"name":"Condition - success - false",
+		"status":1,
+		"source":["if success","text yes","end"],
+		"output":""
 	}
 ]

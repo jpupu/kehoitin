@@ -4,6 +4,7 @@ import shlex
 import socket
 import sys
 from collections.abc import Iterable
+import os
 
 funcs = {"host": "%m", "pwd": "%~"}
 
@@ -73,60 +74,121 @@ class PromptBuilder:
         self.fg: str | None = None
         self.bg: str | None = None
         self.spans: list[str] = []
+        self.commands: list[tuple[str, str]] = []
 
-    def set_color(self, fg: str | None, bg: str | None) -> None:
-        if fg is not None and fg != self.fg:
-            self.fg = fg
-            if fg == "clear":
-                self.spans.append("%f")
-            else:
-                self.spans += ["%F{", fg, "}"]
-        if bg is not None and bg != self.bg:
-            self.bg = bg
-            if bg == "clear":
-                self.spans.append("%k")
-            else:
-                self.spans += ["%K{", bg, "}"]
+    def set_fg(self, fg: str) -> None:
+        self.commands.append(("fg", fg))
 
-    def add(self, *args) -> None:
-        self.spans += args
+    def set_bg(self, bg: str) -> None:
+        self.commands.append(("bg", bg))
+
+    def set_fg_from_bg(self) -> None:
+        self.commands.append(("fg_from_bg", ""))
+
+    def add_text(self, text: str) -> None:
+        self.commands.append(("text", text))
+
+    def add_prompt(self, builder: "PromptBuilder") -> None:
+        self.commands += builder.commands
 
     def get(self) -> str:
-        return "".join(self.spans)
+        fg = ""
+        bg = ""
+        spans: list[str] = []
+        for cmd, arg in self.commands:
+            if cmd == "fg":
+                if arg != fg:
+                    fg = arg
+                    if fg == "clear":
+                        spans.append("%f")
+                    else:
+                        spans += ["%F{", fg, "}"]
+            elif cmd == "bg":
+                if arg != bg:
+                    bg = arg
+                    if bg == "clear":
+                        spans.append("%k")
+                    else:
+                        spans += ["%K{", bg, "}"]
+            elif cmd == "fg_from_bg":
+                arg = bg
+                if arg != fg:
+                    fg = arg
+                    if fg == "clear":
+                        spans.append("%f")
+                    else:
+                        spans += ["%F{", fg, "}"]
+            else:
+                spans.append(arg)
+        return "".join(spans)
 
 
-def interpret(input_lines: Iterable[str]) -> str:
+def evaluate_condition(cond: str) -> bool:
+    if cond.startswith("!"):
+        return not evaluate_condition(cond[1:])
+    if cond == "true":
+        return True
+    if cond == "false":
+        return False
+    if cond == "git":
+        return func_git_branch() != ""
+    if cond == "success":
+        status = os.getenv("KEHOITIN_LAST_STATUS")
+        return status is None or status == "0"
+
+    raise ValueError("invalid condition")
+
+
+def read_block(lines: Iterable[str]) -> PromptBuilder:
     out = PromptBuilder()
 
-    for line in input_lines:
+    for line in lines:
         tokens = shlex.split(line)
         if not tokens:
             continue
         elif tokens[0] == "text":
-            out.add(tokens[1])
+            out.add_text(tokens[1])
         elif tokens[0] == "color":
             fg = tokens[1]
             bg = tokens[2]
             if len(tokens) > 3:
                 symbol, forward = separator(tokens[3])
                 if forward:
-                    out.set_color(out.bg, bg)
+                    out.set_fg_from_bg()
+                    out.set_bg(bg)
                 else:
-                    out.set_color(bg, out.bg)
-                out.add(symbol)
-            out.set_color(fg, bg)
+                    out.set_fg(bg)
+                out.add_text(symbol)
+            out.set_fg(fg)
+            out.set_bg(bg)
         elif tokens[0] == "func":
             name = tokens[1]
             if name == "cwd":
-                out.add(str(Path.cwd()))
+                out.add_text(str(Path.cwd()))
             elif name == "host":
-                out.add(func_host())
+                out.add_text(func_host())
             elif name == "git-branch":
-                out.add(func_git_branch())
+                out.add_text(func_git_branch())
             else:
-                out.add(f"(invalid function {name})")
+                out.add_text(f"(invalid function {name})")
+        elif tokens[0] == "if":
+            cond = tokens[1]
+            block = read_block(lines)
+            try:
+                if evaluate_condition(cond):
+                    out.add_prompt(block)
+            except ValueError:
+                out.add_text(f"(invalid condition {cond})")
+        elif tokens[0] == "end":
+            break
+        else:
+            out.add_text(f"(invalid token {tokens[0]})")
 
-    return out.get()
+    return out
+
+
+def interpret(lines: Iterable[str]) -> str:
+    return read_block(lines).get()
 
 
 def show_usage() -> None:

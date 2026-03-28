@@ -24,9 +24,22 @@ class Tester:
         (root / "gitty" / "sub").mkdir(parents=True)
         subprocess.call("git init", cwd=root / "gitty", shell=True)
 
-    def check(self, mode: str, input: str | None, output_goal: str | None) -> str:
+    def check(
+        self,
+        mode: str,
+        input: str | None,
+        output_goal: str | None,
+        last_status: int | None,
+    ) -> str:
         if input is None:
             return output_goal
+
+        env = {
+            "LD_PRELOAD": Path("fakehostname/fakehostname.so").absolute(),
+            "FAKEHOSTNAME": "testhost",
+        }
+        if last_status is not None:
+            env["KEHOITIN_LAST_STATUS"] = str(last_status)
 
         p = subprocess.run(
             [self.executable, mode],
@@ -34,10 +47,7 @@ class Tester:
             cwd=self.cwd,
             capture_output=True,
             text=True,
-            env={
-                "LD_PRELOAD": Path("fakehostname/fakehostname.so").absolute(),
-                "FAKEHOSTNAME": "testhost",
-            },
+            env=env,
         )
         if p.returncode != 0 or p.stderr:
             print("\x1b[31m \x1b[0m", end="\n")
@@ -71,7 +81,7 @@ class Tester:
 
         self.cwd = t.get("working_directory") or Path.cwd()
 
-        self.check("interpret", source, output)
+        self.check("interpret", source, output, t.get("status"))
         print("")
 
     def run_tests(self) -> None:
