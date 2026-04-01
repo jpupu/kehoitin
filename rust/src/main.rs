@@ -97,42 +97,82 @@ fn git_branch() -> Option<String> {
     Some(branch + postfix)
 }
 
-struct PromptBuilder {
-    fg: String,
-    bg: String,
-    result: String,
+enum Fragment {
+    SetFg(String),
+    SetBg(String),
+    SetFgFromBg,
+    AddText(String),
 }
 
-impl PromptBuilder {
+struct Segment(Vec<Fragment>);
+
+impl Segment {
     fn new() -> Self {
-        Self {
-            fg: String::from("clear"),
-            bg: String::from("clear"),
-            result: String::new(),
-        }
+        Self(Vec::new())
     }
 
-    fn color(&mut self, fg: &str, bg: &str) {
-        if fg != self.fg {
-            self.fg = fg.into();
-            if fg == "clear" {
-                self.result.push_str("%f");
-            } else {
-                self.result.push_str(&format!("%F{{{}}}", fg));
-            }
-        }
-        if bg != self.bg {
-            self.bg = bg.into();
-            if bg == "clear" {
-                self.result.push_str("%k");
-            } else {
-                self.result.push_str(&format!("%K{{{}}}", bg));
-            }
-        }
+    fn set_fg(&mut self, fg: &str) {
+        self.0.push(Fragment::SetFg(fg.to_owned()));
+    }
+
+    fn set_bg(&mut self, bg: &str) {
+        self.0.push(Fragment::SetBg(bg.to_owned()));
+    }
+
+    fn set_fg_from_bg(&mut self) {
+        self.0.push(Fragment::SetFgFromBg);
     }
 
     fn push(&mut self, text: &str) {
-        self.result.push_str(text);
+        self.0.push(Fragment::AddText(text.to_owned()))
+    }
+
+    fn append(&mut self, other: &mut Segment) {
+        self.0.append(&mut other.0);
+    }
+
+    fn render(self) -> String {
+        let mut fg = String::from("clear");
+        let mut bg = String::from("clear");
+        let mut out = String::new();
+
+        for fragment in self.0 {
+            match fragment {
+                Fragment::SetFg(new_fg) => {
+                    if *new_fg != fg {
+                        fg = new_fg;
+                        if fg == "clear" {
+                            out.push_str("%f");
+                        } else {
+                            out.push_str(&format!("%F{{{}}}", fg));
+                        }
+                    }
+                }
+                Fragment::SetBg(new_bg) => {
+                    if *new_bg != bg {
+                        bg = new_bg;
+                        if bg == "clear" {
+                            out.push_str("%k");
+                        } else {
+                            out.push_str(&format!("%K{{{}}}", bg));
+                        }
+                    }
+                }
+                Fragment::SetFgFromBg => {
+                    let new_fg = bg.clone();
+                    if new_fg != fg {
+                        fg = new_fg;
+                        if fg == "clear" {
+                            out.push_str("%f");
+                        } else {
+                            out.push_str(&format!("%F{{{}}}", fg));
+                        }
+                    }
+                }
+                Fragment::AddText(text) => out.push_str(&text),
+            }
+        }
+        out
     }
 }
 
@@ -147,10 +187,20 @@ const SEPMAP: [(&str, &str, bool); 8] = [
     ("rev-slope", "\u{e0be}", true),
 ];
 
-fn interpret() -> String {
-    let mut out = PromptBuilder::new();
-    for line in io::stdin().lines() {
-        let linebuf = line.unwrap();
+fn eval_condition(cond: &str) -> Option<bool> {
+    match cond {
+        x if x.starts_with("!") => eval_condition(&cond[1..]).map(|c| !c),
+        "true" => Some(true),
+        "false" => Some(false),
+        "git" => Some(git_branch().is_some()),
+        "success" => Some(std::env::var("KEHOITIN_LAST_STATUS").map_or(true, |s| s == "0")),
+        _ => None,
+    }
+}
+
+fn read_block(mut lines: &mut dyn Iterator<Item = String>) -> Segment {
+    let mut out = Segment::new();
+    while let Some(linebuf) = lines.next() {
         let words = linebuf.split_quoted();
         let command = words[0];
 
@@ -164,16 +214,18 @@ fn interpret() -> String {
                     for (key, text, reverse) in &SEPMAP {
                         if sep == key {
                             if *reverse {
-                                out.color(bg, &out.bg.clone());
+                                out.set_fg(bg);
                             } else {
-                                out.color(&out.bg.clone(), bg);
+                                out.set_fg_from_bg();
+                                out.set_bg(bg);
                             }
                             out.push(text);
                             break;
                         }
                     }
                 }
-                out.color(fg, bg);
+                out.set_fg(fg);
+                out.set_bg(bg);
             }
             "func" => {
                 let func = words[1];
@@ -188,11 +240,24 @@ fn interpret() -> String {
                 };
                 out.push(&funcout);
             }
+            "if" => {
+                let cond = words[1];
+                let mut body = read_block(&mut lines);
+                match eval_condition(cond) {
+                    Some(true) => out.append(&mut body),
+                    Some(false) => (),
+                    None => out.push(&format!("(invalid condition {})", cond)),
+                }
+            }
+            "end" => break,
             _ => out.push("(bad command)"),
         }
     }
+    out
+}
 
-    out.result
+fn interpret() -> String {
+    read_block(&mut io::stdin().lines().map(|x| x.unwrap())).render()
 }
 
 fn main() {
