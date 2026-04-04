@@ -2,8 +2,13 @@ color #b7d3de #0e5a78 rev-round
 func host
 color black #f0c800 slope
 func cwd
-color black #e35a00 slope
-text ""
-func git-branch
+if git
+	color black #e35a00 slope
+	text ""
+	func git-branch
+end
+if !success
+	color black #aa0000 angle
+end
 color clear clear angle
 text " "
