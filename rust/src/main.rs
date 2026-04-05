@@ -1,4 +1,14 @@
-use std::io;
+use std::{env, fs};
+
+const EVAL_TEXT: &str = "
+kehoitin_precmd() {
+    export KEHOITIN_LAST_STATUS=$?
+}
+if (( !$precmd_functions[(Ie)kehoitin_precmd] )); then
+    precmd_functions+=( kehoitin_precmd )
+fi
+PROMPT='$(_BINPATH_ prompt _INFILE_)'
+";
 
 unsafe extern "C" {
     pub fn gethostname(name: *mut libc::c_char, size: libc::size_t) -> libc::c_int;
@@ -198,7 +208,7 @@ fn eval_condition(cond: &str) -> Option<bool> {
     }
 }
 
-fn read_block(mut lines: &mut dyn Iterator<Item = String>) -> Segment {
+fn read_block(mut lines: &mut dyn Iterator<Item = &str>) -> Segment {
     let mut out = Segment::new();
     while let Some(linebuf) = lines.next() {
         let words = linebuf.split_quoted();
@@ -256,15 +266,40 @@ fn read_block(mut lines: &mut dyn Iterator<Item = String>) -> Segment {
     out
 }
 
-fn interpret() -> String {
-    read_block(&mut io::stdin().lines().map(|x| x.unwrap())).render()
+fn interpret(infile: &str) -> String {
+    let input = fs::read_to_string(infile).expect("File must exist and be readable");
+    read_block(&mut input.lines()).render()
 }
 
 fn main() {
-    match std::env::args().nth(1).as_deref() {
-        Some("interpret") => print!("{}", interpret()),
+    match env::args().nth(1).as_deref() {
+        Some("prompt") => print!(
+            "{}",
+            interpret(
+                env::args()
+                    .nth(2)
+                    .expect("Must provide input filepath")
+                    .as_ref()
+            )
+        ),
+        Some("eval") => print!(
+            "{}",
+            EVAL_TEXT
+                .replace(
+                    "_BINPATH_",
+                    &fs::canonicalize(env::args().next().unwrap())
+                        .unwrap()
+                        .to_string_lossy()
+                )
+                .replace(
+                    "_INFILE_",
+                    &fs::canonicalize(env::args().nth(2).expect("Must provide input filepath"))
+                        .unwrap()
+                        .to_string_lossy()
+                )
+        ),
         x => {
-            eprintln!("usage: kehoitin interpret");
+            eprintln!("usage: kehoitin prompt|eval <file>");
             eprintln!("got [{:?}]", x);
             std::process::exit(1);
         }
