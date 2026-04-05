@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 import socket
 
-SOURCE = Path("example.prompt").read_bytes()
+SOURCEPATH = "example.prompt"
 EXECUTED = (
     Path("example.executed")
     .read_bytes()
@@ -15,8 +15,8 @@ EXECUTED = (
 )
 
 
-def run(command: str, input: bytes, output: bytes) -> None:
-    p = subprocess.run([executable, command], input=input, capture_output=True)
+def run(command: str, input_path: str, output: bytes) -> None:
+    p = subprocess.run([executable, command, input_path], capture_output=True)
     if p.stdout != output:
         raise RuntimeError(
             f"running [{command}] failed:\n"
@@ -27,11 +27,11 @@ def run(command: str, input: bytes, output: bytes) -> None:
         )
 
 
-def timed_run(command: str, input: bytes, output: bytes) -> None:
+def timed_run(command: str, input_path: str, output: bytes) -> None:
     t = timeit.Timer(
-        "run(command, input, output)",
+        "run(command, input_path, output)",
         setup="from __main__ import run",
-        globals=dict(command=command, input=input, output=output),
+        globals=dict(command=command, input_path=input_path, output=output),
     )
     count, time = t.autorange()
     print(
@@ -44,4 +44,4 @@ if len(sys.argv) != 2:
     sys.exit(1)
 executable = sys.argv[1]
 
-timed_run("interpret", SOURCE, EXECUTED)
+timed_run("prompt", SOURCEPATH, EXECUTED)

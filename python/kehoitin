@@ -6,6 +6,16 @@ import sys
 from collections.abc import Iterable
 import os
 
+EVAL_TEXT = """
+kehoitin_precmd() {
+    export KEHOITIN_LAST_STATUS=$?
+}
+if (( !$precmd_functions[(Ie)kehoitin_precmd] )); then
+    precmd_functions+=( kehoitin_precmd )
+fi
+PROMPT='$(_BINPATH_ prompt _INFILE_)'
+"""
+
 funcs = {"host": "%m", "pwd": "%~"}
 
 host_abbr = {"localhost-live": "⌂"}
@@ -192,14 +202,23 @@ def interpret(lines: Iterable[str]) -> str:
 
 
 def show_usage() -> None:
-    print("usage: kehoitin interpret")
+    print("usage: kehoitin prompt|eval <file>")
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         show_usage()
-    elif sys.argv[1] == "interpret":
-        print(interpret(sys.stdin), end="")
+    elif sys.argv[1] == "prompt":
+        infile = sys.argv[2]
+        with open(infile, "r") as fp:
+            print(interpret(fp), end="")
+    elif sys.argv[1] == "eval":
+        infile = sys.argv[2]
+        print(
+            EVAL_TEXT.replace("_BINPATH_", str(Path(sys.argv[0]).absolute())).replace(
+                "_INFILE_", str(Path(infile).absolute())
+            )
+        )
     else:
         show_usage()
         sys.exit(2)

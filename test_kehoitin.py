@@ -4,6 +4,7 @@ import subprocess
 import json
 from pathlib import Path
 import sys
+import tempfile
 
 
 class CheckError(RuntimeError):
@@ -41,14 +42,16 @@ class Tester:
         if last_status is not None:
             env["KEHOITIN_LAST_STATUS"] = str(last_status)
 
-        p = subprocess.run(
-            [self.executable, mode],
-            input=input,
-            cwd=self.cwd,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+        with tempfile.NamedTemporaryFile("w", delete_on_close=False) as infile:
+            infile.write(input)
+            infile.close()
+            p = subprocess.run(
+                [self.executable, mode, infile.name],
+                cwd=self.cwd,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
         if p.returncode != 0 or p.stderr:
             print("\x1b[31m \x1b[0m", end="\n")
             raise CheckError(
@@ -81,7 +84,7 @@ class Tester:
 
         self.cwd = t.get("working_directory") or Path.cwd()
 
-        self.check("interpret", source, output, t.get("status"))
+        self.check("prompt", source, output, t.get("status"))
         print("")
 
     def run_tests(self) -> None:
