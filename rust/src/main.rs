@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-const EVAL_TEXT: &str = "
+const INIT_TEXT: &str = "
 kehoitin_precmd() {
     export KEHOITIN_LAST_STATUS=$?
 }
@@ -284,9 +284,9 @@ fn main() {
                     .as_ref()
             )
         ),
-        Some("eval") => print!(
+        Some("init") => print!(
             "{}",
-            EVAL_TEXT
+            INIT_TEXT
                 .replace("_BINPATH_", &env::current_exe().unwrap().to_string_lossy())
                 .replace(
                     "_INFILE_",
@@ -296,7 +296,7 @@ fn main() {
                 )
         ),
         x => {
-            eprintln!("usage: kehoitin prompt|eval <file>");
+            eprintln!("usage: kehoitin prompt|init <file>");
             eprintln!("got [{:?}]", x);
             std::process::exit(1);
         }

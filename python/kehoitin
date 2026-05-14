@@ -6,7 +6,7 @@ import sys
 from collections.abc import Iterable
 import os
 
-EVAL_TEXT = """
+INIT_TEXT = """
 kehoitin_precmd() {
     export KEHOITIN_LAST_STATUS=$?
 }
@@ -202,7 +202,7 @@ def interpret(lines: Iterable[str]) -> str:
 
 
 def show_usage() -> None:
-    print("usage: kehoitin prompt|eval <file>")
+    print("usage: kehoitin prompt|init <file>")
 
 
 def main() -> None:
@@ -212,10 +212,10 @@ def main() -> None:
         infile = sys.argv[2]
         with open(infile, "r") as fp:
             print(interpret(fp), end="")
-    elif sys.argv[1] == "eval":
+    elif sys.argv[1] == "init":
         infile = sys.argv[2]
         print(
-            EVAL_TEXT.replace("_BINPATH_", str(Path(sys.argv[0]).absolute())).replace(
+            INIT_TEXT.replace("_BINPATH_", str(Path(sys.argv[0]).absolute())).replace(
                 "_INFILE_", str(Path(infile).absolute())
             )
         )
