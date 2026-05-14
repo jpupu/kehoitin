@@ -35,6 +35,7 @@ class Tester:
         if input is None:
             return output_goal
 
+        # Setup environment.
         env = {
             "LD_PRELOAD": Path("fakehostname/fakehostname.so").absolute(),
             "FAKEHOSTNAME": "testhost",
@@ -42,35 +43,43 @@ class Tester:
         if last_status is not None:
             env["KEHOITIN_LAST_STATUS"] = str(last_status)
 
+        # Setup input file.
         with tempfile.NamedTemporaryFile("w", delete_on_close=False) as infile:
             infile.write(input)
             infile.close()
-            p = subprocess.run(
-                [self.executable, mode, infile.name],
+
+            # Run the process.
+            # Note that args[0] != executable, this reflects real-word usage where
+            # the executable is in PATH and is run by filename alone.
+            p = subprocess.Popen(
+                ["kehoitin", mode, infile.name],
+                executable=self.executable,
                 cwd=self.cwd,
-                capture_output=True,
-                text=True,
                 env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
-        if p.returncode != 0 or p.stderr:
+            stdout, stderr = p.communicate()
+
+        if p.returncode != 0 or stderr:
             print("\x1b[31m \x1b[0m", end="\n")
             raise CheckError(
-                f"Return code {p.returncode}:\n----stderr---\n{p.stderr}\n----stdout----\n{p.stdout}\n----\n"
+                f"Return code {p.returncode}:\n----stderr---\n{stderr}\n----stdout----\n{stdout}\n----\n"
             )
-        output = p.stdout
 
         if output_goal is not None:
-            if output == output_goal:
+            if stdout == output_goal:
                 print("\x1b[32m \x1b[0m", end="")
-                return output
+                return stdout
             else:
                 print("\x1b[31m \x1b[0m", end="\n")
                 print("expected:", repr(output_goal))
-                print("got:     ", repr(output))
+                print("got:     ", repr(stdout))
                 raise CheckError("Check failed")
         else:
             print(" ", end="")
-            return output
+            return stdout
 
     def run_testcase(self, t: dict) -> None:
         source = t.get("source")

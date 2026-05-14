@@ -267,8 +267,10 @@ fn read_block(mut lines: &mut dyn Iterator<Item = &str>) -> Segment {
 }
 
 fn interpret(infile: &str) -> String {
-    let input = fs::read_to_string(infile).expect("File must exist and be readable");
-    read_block(&mut input.lines()).render()
+    match fs::read_to_string(infile) {
+        Ok(input) => read_block(&mut input.lines()).render(),
+        Err(_) => format!("(failed to read file '{}')", infile),
+    }
 }
 
 fn main() {
@@ -285,12 +287,7 @@ fn main() {
         Some("eval") => print!(
             "{}",
             EVAL_TEXT
-                .replace(
-                    "_BINPATH_",
-                    &fs::canonicalize(env::args().next().unwrap())
-                        .unwrap()
-                        .to_string_lossy()
-                )
+                .replace("_BINPATH_", &env::current_exe().unwrap().to_string_lossy())
                 .replace(
                     "_INFILE_",
                     &fs::canonicalize(env::args().nth(2).expect("Must provide input filepath"))
